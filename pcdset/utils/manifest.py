@@ -35,7 +35,7 @@ def load_category_map(path: Path) -> Dict[str, str]:
 
 
 def build_example_manifest(path: Path) -> None:
-    """Write a small example manifest."""
+    """Write a small example manifest for the PCN profile."""
     rows = [
         {"path": "chair_0001.ply", "role": "partial", "category": "chair", "model_id": "0001", "view_id": "00", "split": "train"},
         {"path": "chair_0001_complete.ply", "role": "complete", "category": "chair", "model_id": "0001", "view_id": "", "split": "train"},
@@ -45,6 +45,21 @@ def build_example_manifest(path: Path) -> None:
         writer = csv.DictWriter(fh, fieldnames=["path", "role", "category", "model_id", "view_id", "split"])
         writer.writeheader()
         writer.writerows(rows)
+
+
+def build_example_manifest_shapenet(path: Path) -> None:
+    """Write a small example manifest for the ShapeNet profile."""
+
+    lines = [
+        "# path,role,category,model_id,view_id,split",
+        "# role is ignored; use 'object' or leave blank",
+        "path,role,category,model_id,view_id,split",
+        "chair_0001.txt,object,chair,0001,,train",
+        "airplane_0002.csv,object,airplane,0002,,val",
+        "car_0003.ply,object,car,0003,,test",
+        "lamp_0004.npz,object,lamp,0004,,train",
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def load_entries(base: Path, manifest: Optional[Path], split_strategy: str = "FILE", ratios: Tuple[float, float, float] = (0.9,0.03,0.07), category_map: Optional[Dict[str,str]] = None) -> List[Entry]:
@@ -89,6 +104,58 @@ def load_entries(base: Path, manifest: Optional[Path], split_strategy: str = "FI
                             if file.suffix.lower() not in allowed_ext:
                                 continue
                             entries.append(Entry(file, role, cat, model_id, None, "train"))
+    if split_strategy.upper() == "RATIO" and entries:
+        random.shuffle(entries)
+        n = len(entries)
+        n_train = int(n * ratios[0])
+        n_val = int(n * ratios[1])
+        for i, e in enumerate(entries):
+            if i < n_train:
+                e.split = "train"
+            elif i < n_train + n_val:
+                e.split = "val"
+            else:
+                e.split = "test"
+    return entries
+
+
+def load_entries_shapenet(base: Path, manifest: Optional[Path], split_strategy: str = "FILE", ratios: Tuple[float, float, float] = (0.9,0.05,0.05), category_map: Optional[Dict[str, str]] = None) -> List[Entry]:
+    """Load entries for the ShapeNet profile."""
+
+    entries: List[Entry] = []
+    if manifest:
+        df = pd.read_csv(manifest)
+        for row in df.itertuples(index=False):
+            path = Path(row.path)
+            if not path.is_absolute():
+                path = base / path
+            cat = row.category
+            if category_map and cat in category_map:
+                cat = category_map[cat]
+            model_id = str(row.model_id)
+            view_id = getattr(row, "view_id", None)
+            view_id = None if (isinstance(view_id, float) and pd.isna(view_id)) else (str(view_id) if view_id else None)
+            split = getattr(row, "split", "train")
+            role = getattr(row, "role", "object")
+            entries.append(Entry(path, role, cat, model_id, view_id, split))
+    else:
+        allowed_ext = {".ply", ".pcd", ".txt", ".csv", ".npz"}
+        for cat_dir in base.iterdir():
+            if not cat_dir.is_dir():
+                continue
+            cat = category_map.get(cat_dir.name, cat_dir.name) if category_map else cat_dir.name
+            for model_dir in cat_dir.iterdir():
+                if not model_dir.is_dir():
+                    continue
+                model_id = model_dir.name
+                file: Optional[Path] = None
+                for f in model_dir.iterdir():
+                    if f.suffix.lower() in allowed_ext:
+                        file = f
+                        break
+                if file is None:
+                    continue
+                entries.append(Entry(file, "object", cat, model_id, None, "train"))
     if split_strategy.upper() == "RATIO" and entries:
         random.shuffle(entries)
         n = len(entries)
