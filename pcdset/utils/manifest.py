@@ -39,22 +39,73 @@ def build_example_manifest(path: Path, profile: str = "pcn") -> None:
 
     if profile == "pcn":
         rows = [
-            {"path": "chair_0001.ply", "role": "partial", "category": "chair", "model_id": "0001", "view_id": "00", "split": "train"},
-            {"path": "chair_0001_complete.ply", "role": "complete", "category": "chair", "model_id": "0001", "view_id": "", "split": "train"},
-            {"path": "airplane_0001.ply", "role": "partial", "category": "airplane", "model_id": "0001", "view_id": "00", "split": "val"},
+            {
+                "path": "chair_0001.ply",
+                "role": "partial",
+                "category": "chair",
+                "model_id": "0001",
+                "view_id": "00",
+                "split": "train",
+            },
+            {
+                "path": "chair_0001_complete.ply",
+                "role": "complete",
+                "category": "chair",
+                "model_id": "0001",
+                "view_id": "",
+                "split": "train",
+            },
+            {
+                "path": "airplane_0001.ply",
+                "role": "partial",
+                "category": "airplane",
+                "model_id": "0001",
+                "view_id": "00",
+                "split": "val",
+            },
         ]
     else:  # shapenet
         rows = [
-            {"path": "chair_0001.ply", "role": "object", "category": "chair", "model_id": "0001", "view_id": "", "split": "train"},
-            {"path": "chair_0002.csv", "role": "object", "category": "chair", "model_id": "0002", "view_id": "", "split": "val"},
-            {"path": "table_0001.txt", "role": "object", "category": "table", "model_id": "0001", "view_id": "", "split": "test"},
-            {"path": "sofa_0003.pcd", "role": "object", "category": "sofa", "model_id": "0003", "view_id": "", "split": "train"},
+            {
+                "path": "chair_0001.ply",
+                "role": "object",
+                "category": "chair",
+                "model_id": "0001",
+                "view_id": "",
+                "split": "train",
+            },
+            {
+                "path": "chair_0002.csv",
+                "role": "object",
+                "category": "chair",
+                "model_id": "0002",
+                "view_id": "",
+                "split": "val",
+            },
+            {
+                "path": "table_0001.txt",
+                "role": "object",
+                "category": "table",
+                "model_id": "0001",
+                "view_id": "",
+                "split": "test",
+            },
+            {
+                "path": "sofa_0003.pcd",
+                "role": "object",
+                "category": "sofa",
+                "model_id": "0003",
+                "view_id": "",
+                "split": "train",
+            },
         ]
     with path.open("w", newline="", encoding="utf-8") as fh:
         if profile == "shapenet":
             fh.write("# path,role,category,model_id,view_id,split\n")
             fh.write("# role is ignored for shapenet; use 'object'\n")
-        writer = csv.DictWriter(fh, fieldnames=["path", "role", "category", "model_id", "view_id", "split"])
+        writer = csv.DictWriter(
+            fh, fieldnames=["path", "role", "category", "model_id", "view_id", "split"]
+        )
         writer.writeheader()
         writer.writerows(rows)
 
