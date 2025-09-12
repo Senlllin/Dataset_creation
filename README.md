@@ -2,6 +2,8 @@
 
 `pcdset` converts loose point cloud files into well organised datasets.
 The first built in profile targets the [PCN dataset](https://github.com/wentaoyuan/pcn).
+A second profile converts data into a [ShapeNet](https://shapenet.org/) style
+layout.
 
 ## Installation
 
@@ -47,6 +49,50 @@ pcdset convert --profile pcn --input <input> --out <out> \
 
 ```bash
 pcdset validate --profile pcn --root D:/datasets/PCN_custom
+```
+
+## ShapeNet profile
+
+The ``shapenet`` profile converts arbitrary point clouds into a directory
+structure compatible with ShapeNet style datasets.
+
+### Example manifest
+
+```bash
+pcdset example-manifest --profile shapenet -o manifest.csv
+```
+
+### Convert using a manifest
+
+```bash
+pcdset convert \
+  --profile shapenet \
+  --input D:/raw_points \
+  --manifest D:/raw_points/manifest.csv \
+  --out D:/datasets/ShapeNet_custom \
+  --points-n 2048 \
+  --normalize unit --center --fps --dedup \
+  --file-ext ply --basename points \
+  --taxonomy-out taxonomy.csv \
+  --to-lmdb --lmdb-max-gb 32 \
+  --workers 8
+```
+
+### Convert by directory inference
+
+```
+<input>/<category>/<model_id>/*.(ply|pcd|txt|csv|npz)
+```
+
+```bash
+pcdset convert --profile shapenet --input <input> --out <out> \
+               --points-n 2048 --normalize unit --center
+```
+
+### Validate
+
+```bash
+pcdset validate --profile shapenet --root D:/datasets/ShapeNet_custom
 ```
 
 ## Quick start (Windows PowerShell)

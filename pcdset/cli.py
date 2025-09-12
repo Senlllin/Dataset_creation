@@ -1,8 +1,8 @@
 """Command line interface for :mod:`pcdset`.
 
-This module exposes a :class:`typer.Typer` app with subcommands
-implemented in other modules.  The :func:`pcdset.main.main` function
-invokes this app.
+This module exposes a :class:`typer.Typer` application that dispatches to
+profile specific conversion logic.  Two profiles are bundled: ``pcn`` and
+``shapenet``.
 """
 from __future__ import annotations
 
@@ -12,12 +12,22 @@ from typing import Optional
 import typer
 
 from .profiles.pcn import PCNProfile
+from .profiles.shapenet import ShapeNetProfile
 from .utils import logging as log_utils
 from .utils.manifest import (
     build_example_manifest,
+    build_example_manifest_shapenet,
     load_entries,
-    load_category_map,
+    load_entries_shapenet,
 )
+from .utils.taxonomy import load_category_map
+
+
+PROFILES = {
+    "pcn": PCNProfile,
+    "shapenet": ShapeNetProfile,
+}
+
 
 app = typer.Typer(add_completion=False, help="Point cloud dataset tools")
 
@@ -31,26 +41,34 @@ def main_callback(verbose: bool = typer.Option(False, "--verbose", help="Enable 
 @app.command("list-profiles")
 def list_profiles() -> None:
     """List available conversion profiles."""
-    typer.echo("pcn - PCN dataset structure")
+    typer.echo("pcn - PCN dataset structure (partial_n=2048, complete_n=16384)")
+    typer.echo("shapenet - ShapeNet dataset structure (points_n=2048)")
 
 
 @app.command("example-manifest")
-def example_manifest(profile: str = typer.Option("pcn"),
-                     output: Path = typer.Option("manifest.csv", "-o", help="Output CSV path")) -> None:
+def example_manifest(
+    profile: str = typer.Option("pcn"),
+    output: Path = typer.Option("manifest.csv", "-o", help="Output CSV path"),
+) -> None:
     """Create an example manifest file for the selected profile."""
-    if profile != "pcn":
-        raise typer.BadParameter("Only 'pcn' profile is supported")
-    build_example_manifest(output)
+    if profile == "pcn":
+        build_example_manifest(output)
+    elif profile == "shapenet":
+        build_example_manifest_shapenet(output)
+    else:
+        raise typer.BadParameter("Unknown profile")
     typer.echo(f"Wrote example manifest to {output}")
 
 
 @app.command()
-def validate(profile: str = typer.Option("pcn"),
-            root: Path = typer.Option(..., exists=True, file_okay=False, help="Root dataset directory")) -> None:
+def validate(
+    profile: str = typer.Option("pcn"),
+    root: Path = typer.Option(..., exists=True, file_okay=False, help="Root dataset directory"),
+) -> None:
     """Validate that a converted dataset appears structurally sound."""
-    if profile != "pcn":
-        raise typer.BadParameter("Only 'pcn' profile is supported")
-    prof = PCNProfile()
+    if profile not in PROFILES:
+        raise typer.BadParameter("Unknown profile")
+    prof = PROFILES[profile]()
     prof.validate_structure(root)
 
 
@@ -66,6 +84,9 @@ def convert(
     test_ratio: float = typer.Option(0.07),
     partial_n: int = typer.Option(2048, help="Points per partial cloud"),
     complete_n: int = typer.Option(16384, help="Points per complete cloud"),
+    points_n: int = typer.Option(2048, help="Points per cloud"),
+    file_ext: str = typer.Option("ply", help="Output file extension", show_default=True),
+    basename: str = typer.Option("points", help="Output filename stem"),
     normalize: str = typer.Option("none", help="Normalization: unit|bbox|none"),
     center: bool = typer.Option(False, help="Center the point cloud"),
     dedup: bool = typer.Option(False, help="Remove duplicate points"),
@@ -74,29 +95,70 @@ def convert(
     to_lmdb: bool = typer.Option(False, help="Also export LMDB"),
     lmdb_max_gb: int = typer.Option(64, help="LMDB map size in GB"),
     category_map: Optional[Path] = typer.Option(None, exists=True, dir_okay=False),
+    taxonomy_out: Optional[Path] = typer.Option(None, help="Write taxonomy CSV/JSON"),
+    save_meta: bool = typer.Option(False, help="Save meta.json per model"),
     save_attrs: bool = typer.Option(False, help="Save extra point attributes"),
     overwrite: bool = typer.Option(False, help="Overwrite existing output"),
     workers: int = typer.Option(8, help="Number of worker threads"),
 ) -> None:
     """Convert raw point clouds into a dataset."""
-    if profile != "pcn":
-        raise typer.BadParameter("Only 'pcn' profile is supported")
 
-    prof = PCNProfile(partial_n=partial_n,
-                      complete_n=complete_n,
-                      normalize=normalize,
-                      center=center,
-                      dedup=dedup,
-                      fps=fps,
-                      voxel=voxel,
-                      to_lmdb=to_lmdb,
-                      lmdb_max_gb=lmdb_max_gb,
-                      save_attrs=save_attrs,
-                      overwrite=overwrite,
-                      workers=workers,
-                      split_strategy=split_strategy,
-                      ratios=(train_ratio, val_ratio, test_ratio))
+    if profile == "pcn":
+        prof = PCNProfile(
+            partial_n=partial_n,
+            complete_n=complete_n,
+            normalize=normalize,
+            center=center,
+            dedup=dedup,
+            fps=fps,
+            voxel=voxel,
+            to_lmdb=to_lmdb,
+            lmdb_max_gb=lmdb_max_gb,
+            save_attrs=save_attrs,
+            overwrite=overwrite,
+            workers=workers,
+            split_strategy=split_strategy,
+            ratios=(train_ratio, val_ratio, test_ratio),
+        )
+        cat_map = load_category_map(category_map) if category_map else None
+        entries = load_entries(
+            input,
+            manifest,
+            split_strategy,
+            ratios=(train_ratio, val_ratio, test_ratio),
+            category_map=cat_map,
+        )
+    elif profile == "shapenet":
+        prof = ShapeNetProfile(
+            points_n=points_n,
+            file_ext=file_ext,
+            basename=basename,
+            normalize=normalize,
+            center=center,
+            dedup=dedup,
+            fps=fps,
+            voxel=voxel,
+            to_lmdb=to_lmdb,
+            lmdb_max_gb=lmdb_max_gb,
+            save_meta=save_meta,
+            save_attrs=save_attrs,
+            overwrite=overwrite,
+            workers=workers,
+            taxonomy_out=taxonomy_out,
+        )
+        cat_map = load_category_map(category_map) if category_map else None
+        entries = load_entries_shapenet(
+            input,
+            manifest,
+            split_strategy,
+            ratios=(train_ratio, val_ratio, test_ratio),
+            category_map=cat_map,
+        )
+    else:
+        raise typer.BadParameter("Unknown profile")
 
-    cat_map = load_category_map(category_map) if category_map else None
-    entries = load_entries(input, manifest, split_strategy, ratios=(train_ratio, val_ratio, test_ratio), category_map=cat_map)
     prof.convert(entries, out)
+
+
+__all__ = ["app"]
+
