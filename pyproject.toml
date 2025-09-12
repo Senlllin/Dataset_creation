@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcdset"
+version = "0.2.1"
+description = "Convert multi-source point clouds into structured datasets"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{name = "OpenAI", email = "example@example.com"}]
+dependencies = [
+    "numpy",
+    "pandas",
+    "open3d",
+    "plyfile",
+    "lmdb",
+    "msgpack",
+    "msgpack-numpy",
+    "tqdm",
+    "typer",
+]
+
+[project.scripts]
+pcdset = "pcdset.main:main"
