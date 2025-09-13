@@ -1,0 +1,44 @@
+pcdset 项目说明
+
+1. 项目概览
+pcdset 是一个用于将零散的点云文件整理成结构化数据集的 Python 工具集，提供命令行接口，可按不同的配置文件（Profile）将数据转换为特定的数据集布局。目前内置 PCN 和 ShapeNet 两种配置。
+
+2. 安装方式
+- 需要 Python 环境和 pip。
+- 在仓库根目录执行:
+  pip install -U pip
+  pip install -e .
+
+3. 核心功能
+- example-manifest：生成给定配置的示例清单文件，帮助用户准备转换所需的 CSV。
+- convert：根据输入目录与清单，将原始点云批量转换为数据集，支持归一化、中心化、重复点去除、远点采样等操作，可选择输出为 LMDB 或 PLY/PCD/NPZ 文件。
+- validate：在转换完成后检查数据集目录结构是否完整。
+- list-profiles：列出当前支持的配置文件及其特点。
+
+4. 模块结构
+pcdset/
+  cli.py         —— 定义命令行接口，各命令通过 Typer 实现。
+  main.py        —— 程序入口，调用 CLI 应用。
+io/
+  reader.py      —— 统一的点云读取器，支持 PLY、PCD、CSV、TXT、NPZ 等格式。
+  writer_ply.py  —— 根据文件扩展名写出点云，支持 PLY/PCD/NPZ。
+  writer_lmdb.py —— 将点云写入 LMDB 数据库。
+ops/
+  normalize.py   —— 提供归一化、中心化、体素降采样等操作。
+  resample.py    —— 提供随机采样和最远点采样。
+profiles/
+  pcn.py         —— PCN 数据集配置，实现指定点数的 partial/complete 点云生成。
+  shapenet.py    —— ShapeNet 风格配置，支持自定义类别映射和分类层级输出。
+utils/
+  logging.py     —— 日志工具，负责输出调试信息。
+  manifest.py    —— 解析与生成转换清单，记录点云路径、类别、拆分等信息。
+  taxonomy.py    —— 针对 ShapeNet 提供类别层级及映射工具。
+
+5. 典型工作流程
+- 使用 example-manifest 生成 CSV 模板并填写点云路径及其角色。
+- 根据需要选择 pcn 或 shapenet 配置执行 convert，指定输入目录和输出目录。
+- 转换完成后运行 validate 确认输出目录结构正确。
+
+6. 适用场景
+该项目适用于研究者或开发者快速构建点云补全、分类等任务的训练数据集，尤其适合将现有散乱的点云样本组织成 PCN 或 ShapeNet 结构。
+
