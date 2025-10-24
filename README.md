@@ -89,6 +89,24 @@ pcdset convert --profile shapenet --input <input> --out <out> \
                --points-n 2048 --normalize unit --center
 ```
 
+### One-command conversion from a folder
+
+When point clouds are stored in a single directory (optionally with
+category sub-folders), the ``auto`` command can prepare train/val/test splits
+and create the ShapeNet style dataset structure in one step:
+
+```bash
+pcdset auto \
+  --input D:/raw_points \
+  --out D:/datasets/ShapeNet_auto \
+  --train-ratio 0.8 --val-ratio 0.1 --test-ratio 0.1 \
+  --points-n 2048 --normalize unit --center
+```
+
+Use ``--manifest-out`` if you also want a CSV manifest of the inferred
+samples, and ``--allowed-ext`` to restrict which file extensions are
+considered point clouds.
+
 ### Validate
 
 ```bash
