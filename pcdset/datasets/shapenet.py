@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence
 
+from ..manifest import load_entries_shapenet
 from ..profiles.shapenet import ShapeNetProfile
-from ..utils.manifest import load_entries_shapenet
 from ..utils.taxonomy import load_category_map
 from ._common import validate_ratios
 

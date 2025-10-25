@@ -21,7 +21,7 @@ from ..ops import (
     dedup as op_dedup,
 )
 from ..utils.logging import logger
-from ..utils.manifest import Entry
+from ..manifest import Entry
 from .base import BaseProfile
 
 
