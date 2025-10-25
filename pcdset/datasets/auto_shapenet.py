@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
+from ..manifest import assign_splits, build_simple_entries, write_manifest
 from ..profiles.shapenet import ShapeNetProfile
-from ..utils.manifest import assign_splits, build_simple_entries, write_manifest
 from ._common import validate_ratios
 
 
